@@ -129,6 +129,8 @@ int main() {
             movement /= length;
         }
 
+        // std::cout << "Movement Vector: (" << movement.x << ", " << movement.y << ")" << std::endl;
+
         // Apply the calculated movement to the player.
         // Multiply the normalized direction vector by the desired speed.
         player.move(movement * moveSpeed);
