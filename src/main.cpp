@@ -58,7 +58,8 @@ const unsigned int WINDOW_HEIGHT = 600;
 // Using an enum improves code readability compared to using raw numbers like 0 or 1.
 enum TileType {
     Air = 0,   // Represents empty space. Player can move through these tiles.
-    Solid = 1  // Represents solid ground/walls. Player collides with these.
+    Solid = 1,  // Represents solid ground/walls. Player collides with these.
+    Coin = 2
 };
 
 // Structure (`struct`) to group together all data related to a game level.
@@ -311,27 +312,31 @@ Level createSimpleLevel() {
     for (int y = 6; y < 11; ++y) level.tiles[y][18] = Solid;
     for (int y = 8; y < level.size.y -1; ++y) level.tiles[y][38] = Solid;
 
+    // Coins
+    level.tiles[9][7] = Coin;
+    level.tiles[7][14] = Coin;
+
     return level; // Return the fully defined level structure.
 }
 
 // Draws the level tiles that are currently visible within the camera's view.
 void drawLevel(sf::RenderWindow& window, const Level& level) {
-    // Create a rectangle shape used to draw each visible solid tile.
-    sf::RectangleShape tileShape({(float)TILE_SIZE, (float)TILE_SIZE});
+    // Create reusable shapes for drawing tiles (more efficient than creating inside loop)
+    sf::RectangleShape solidTileShape({(float)TILE_SIZE, (float)TILE_SIZE});
+    solidTileShape.setFillColor(sf::Color::Blue); // Color for solid tiles
+
+    sf::CircleShape coinShape(TILE_SIZE * 0.3f); // Make coin slightly smaller than tile
+    coinShape.setFillColor(sf::Color::Yellow);
+    // Set origin to center for easier positioning within the tile space
+    coinShape.setOrigin({coinShape.getRadius(), coinShape.getRadius()});
+
 
     // --- View Culling Optimization ---
-    // Get the current view (camera) being used by the window for rendering.
     sf::View currentView = window.getView();
-    // Calculate the world-coordinate bounding box of the current view.
     sf::FloatRect viewBounds;
-    // The view's top-left corner is its center minus half its size.
     viewBounds.position = currentView.getCenter() - currentView.getSize() / 2.f;
     viewBounds.size = currentView.getSize();
 
-    // Determine the range of tile indices (min/max x and y) that could possibly
-    // overlap with the view's bounding box. Add 1 to end indices to ensure
-    // tiles partially overlapping the right/bottom edges are included.
-    // Use std::max/std::min to prevent indices from going outside level bounds.
     int startX = std::max(0, static_cast<int>(viewBounds.position.x / TILE_SIZE));
     int endX = std::min((int)level.size.x, static_cast<int>((viewBounds.position.x + viewBounds.size.x) / TILE_SIZE) + 1);
     int startY = std::max(0, static_cast<int>(viewBounds.position.y / TILE_SIZE));
@@ -340,13 +345,19 @@ void drawLevel(sf::RenderWindow& window, const Level& level) {
     // Loop only through the potentially visible range of tiles.
     for (int y = startY; y < endY; ++y) {
         for (int x = startX; x < endX; ++x) {
-            // If the tile at this grid position is solid...
-            if (level.tiles[y][x] == Solid) {
-                // ...set its color and position...
-                tileShape.setFillColor(sf::Color::Blue);
-                tileShape.setPosition({(float)x * TILE_SIZE, (float)y * TILE_SIZE});
-                // ...and draw it to the window's back buffer.
-                window.draw(tileShape);
+            TileType currentTile = level.tiles[y][x];
+
+            // Draw Solid tiles
+            if (currentTile == Solid) {
+                solidTileShape.setPosition({(float)x * TILE_SIZE, (float)y * TILE_SIZE});
+                window.draw(solidTileShape);
+            }
+            // Draw Coin tiles (ADDED)
+            else if (currentTile == Coin) {
+                // Position the center of the coin in the middle of the tile grid cell
+                coinShape.setPosition({(float)x * TILE_SIZE + TILE_SIZE / 2.f,
+                                       (float)y * TILE_SIZE + TILE_SIZE / 2.f});
+                window.draw(coinShape);
             }
         }
     }
